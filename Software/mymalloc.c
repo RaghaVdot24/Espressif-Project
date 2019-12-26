@@ -58,3 +58,42 @@ void* my_malloc(size_t bytes)
         curr_block=curr_block->s.next;
     }while(1);
 }
+
+
+
+
+void myfree(void* new_block)
+{
+    Header *block_to_insert,*curr_block;
+
+    block_to_insert = (Header*)new_block - 1;
+    
+    curr_block = head;
+    do
+    {
+        if(curr_block >= curr_block->s.next)                         //used to cover the edge case where curr block is last block and next block is the 1st block
+            if(block_to_insert > curr_block || block_to_insert < curr_block->s.next)
+                break;
+        curr_block = curr_block->s.next;
+    } while (!(block_to_insert > curr_block && block_to_insert < curr_block->s.next));
+    
+    
+    if((block_to_insert + block_to_insert->s.size) == curr_block->s.next)   //merge with the next block
+    {
+        block_to_insert->s.size += curr_block->s.next->s.size;
+        block_to_insert->s.next = curr_block->s.next->s.next;
+    }
+    else
+        block_to_insert->s.next = curr_block->s.next;
+    
+    
+    if((curr_block + curr_block->s.size) == block_to_insert)                //merge with previous block
+    {
+        curr_block->s.size += block_to_insert->s.size;
+        curr_block->s.next = block_to_insert->s.next;
+    }
+    else
+        curr_block->s.next = block_to_insert;
+
+    head = curr_block;
+}

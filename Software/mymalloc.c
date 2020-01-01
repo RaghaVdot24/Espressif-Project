@@ -27,10 +27,12 @@ void* my_malloc(size_t bytes)
         base.size = 0;
     }
 
-    curr_header=prev_header->next;
+    bytes += sizeof(Header);
+
+    curr_header = prev_header->next;
     curr_block = curr_header+1;
     prev_block = prev_header+1;
-    printf("In my alloc : currhead size = %lu, bytes = %lu\n Currblock address = %x\n",curr_header->size,bytes,curr_block);
+    printf("In my alloc : currhead size = %lu, bytes = %lu\nCurrblock address = 0x0%x\n",curr_header->size,bytes,curr_block);
     do
     {
         if(curr_header->size >= bytes)
@@ -42,12 +44,12 @@ void* my_malloc(size_t bytes)
                 curr_header->size -= bytes;                     //if block is larger split it into -- second half(size=bytes)
                 printf("New currhead size = %lu\n",curr_header->size);
                 curr_block += curr_header->size;                            //and first half(remaining part of the block)
-                printf("New currblock addr = %x\n",curr_block);
+                printf("New currblock addr = 0x0%x\n",curr_block);
                 curr_header = curr_block;
-                curr_header->size = bytes;
+                curr_header->size = bytes-sizeof(Header);
                 printf("New currhead size = %lu\n",curr_header->size);
                 curr_block = curr_header+1;
-                printf("New currblock addr = %x\n",curr_block);
+                printf("New currblock addr = 0x0%x\n",curr_block);
             }
             head = prev_header;
             return curr_block;                                    //to only return the free space and not the header part
@@ -73,6 +75,7 @@ void myfree(void* new_block)
     Header *block_to_insert,*curr_block;
 
     block_to_insert = (Header*)new_block - 1;
+    printf("new_block 0x0%x , block_to_insert 0x0%x\n",new_block,block_to_insert);
     
     curr_block = head;
     do
@@ -83,19 +86,19 @@ void myfree(void* new_block)
         curr_block = curr_block->next;
     } while (!(block_to_insert > curr_block && block_to_insert < curr_block->next));
     
-    
-    if(((char*)block_to_insert + block_to_insert->size) == (char*)curr_block->next)   //merge with the next block
+    printf("added size = 0x0%x, next block 0x0%x\n",((char*)block_to_insert + block_to_insert->size + sizeof(Header)),curr_block->next);
+    if(((char*)block_to_insert + block_to_insert->size + sizeof(Header)) == (char*)curr_block->next)   //merge with the next block
     {
-        block_to_insert->size += curr_block->next->size;
+        block_to_insert->size += curr_block->next->size + sizeof(Header);
         block_to_insert->next = curr_block->next->next;
     }
     else
         block_to_insert->next = curr_block->next;
     
-    
-    if(((char*)curr_block + curr_block->size) == (char*)block_to_insert)                //merge with previous block
+    printf("added size = 0x0%x, next block 0x0%x\n",((char*)curr_block + curr_block->size + sizeof(Header)),block_to_insert);
+    if(((char*)curr_block + curr_block->size + sizeof(Header)) == (char*)block_to_insert)                //merge with previous block
     {
-        curr_block->size += block_to_insert->size;
+        curr_block->size += block_to_insert->size + sizeof(Header);
         curr_block->next = block_to_insert->next;
     }
     else
@@ -110,7 +113,7 @@ void display_heap(Header *start)
     int i = 0;
     do
     {
-        printf("block: %d , address: %x , size: %lu , next address: %x\n\n",++i,copy,copy->size,copy->next);
+        printf("block: %d , address: 0x0%x , size: %lu , last address of block: 0x0%x, next address: 0x0%x\n\n",++i,copy,copy->size,((char*)copy+copy->size+sizeof(Header)),copy->next);
         copy = copy -> next;
     }while(copy != start);
 }
@@ -121,17 +124,23 @@ int main()
     Header *h1 = head;
     Header *start = head;
     h1->next = h1;
-    h1->size = REQUEST_SIZE;
+    h1->size = REQUEST_SIZE-sizeof(Header);
     printf("Heap before mymalloc\n");
     display_heap(start);
     int *c = my_malloc(sizeof(int));
-    printf("\nHeap after mymalloc\n");
+    printf("\nHeap after mymalloc(int c)\n");
     display_heap(start);
     *c = 12;
     printf("%d\n",*c);
-    myfree(c);
-    printf("\nHeap after myfree\n");
+    int *d = my_malloc(sizeof(int));
+    printf("\nHeap after mymalloc(int d)\n");
     display_heap(start);
+    myfree(c);
+    printf("\nHeap after myfree(int c)\n");
+    display_heap(start);
+    myfree(d);
+    printf("\nHeap after myfree(int d)\n");
+    display_heap(start);    
     free(start);
     return 0;
 }
